@@ -210,9 +210,40 @@ async function verifyCompanyEmails(id) {
   }
 }
 
+const getOrCreateUserCredits = async (clerkUserId, email, firstName) => {
+  try {
+    const userQuery = await sql`
+      SELECT * FROM users 
+      WHERE clerk_user_id = ${clerkUserId};
+    `;
+
+    if (userQuery.length === 0) {
+      const insertQuery = await sql`
+        INSERT INTO users (clerk_user_id, email, first_name, services)
+        VALUES (${clerkUserId}, ${email}, ${firstName}, '{}')
+        RETURNING credits;
+      `;
+
+      return insertQuery[0].credits;
+    } else {
+      return userQuery[0].credits;
+    }
+  } catch (error) {
+    console.error(
+      "Error fetching or inserting user information:",
+      error.message
+    );
+    throw new Error("Internal Server Error");
+  }
+};
+
 async function main() {
   try {
-    const result = await verifyCompanyEmails(22);
+    const result = await getOrCreateUserCredits(
+      "clerk_002", // Clerk user ID
+      "user1@example.com", // Email
+      "John" // First name
+    );
     console.log("Final result:", result);
   } catch (error) {
     console.error("Error:", error);

@@ -6,9 +6,37 @@ const {
   printTableContents,
   findCompaniesByIds,
   verifyCompanyEmails,
+  getOrCreateUserCredits,
 } = require("./utils");
 
 const router = express.Router();
+const { ClerkExpressRequireAuth } = require("@clerk/clerk-sdk-node");
+const { clerkClient } = require("./clerk");
+
+router.get("/credits", ClerkExpressRequireAuth({}), async (req, res) => {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ error: "Unauthenticated!" });
+  }
+
+  try {
+    const user = await clerkClient.users.getUser(req.auth.userId);
+    const userInfo = {
+      id: user.id,
+      email: user.emailAddresses[0].emailAddress,
+      firstName: user.firstName,
+    };
+    const credits = await getOrCreateUserCredits(
+      userInfo.id,
+      userInfo.email,
+      userInfo.firstName
+    );
+
+    res.json({ credits });
+  } catch (error) {
+    console.error("Error fetching user information:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 router.get("/version", async (req, res) => {
   try {

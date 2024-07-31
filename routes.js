@@ -7,6 +7,7 @@ const {
   findCompaniesByIds,
   verifyCompanyEmails,
   getOrCreateUserCredits,
+  getTheArray,
 } = require("./utils");
 
 const router = express.Router();
@@ -17,9 +18,11 @@ router.get("/credits", ClerkExpressRequireAuth({}), async (req, res) => {
   if (!req.auth || !req.auth.userId) {
     return res.status(401).json({ error: "Unauthenticated!" });
   }
-
   try {
     const user = await clerkClient.users.getUser(req.auth.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
     const userInfo = {
       id: user.id,
       email: user.emailAddresses[0].emailAddress,
@@ -30,8 +33,7 @@ router.get("/credits", ClerkExpressRequireAuth({}), async (req, res) => {
       userInfo.email,
       userInfo.firstName
     );
-
-    res.json({ credits });
+    res.status(200).json({ credits });
   } catch (error) {
     console.error("Error fetching user information:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -66,18 +68,42 @@ router.get("/table-contents", async (req, res) => {
   }
 });
 
-router.get("/companies-by-ids", async (req, res) => {
-  const ids = [20, 21, 22, 70, 159];
-  if (!ids.length) {
-    return res.status(400).json({ error: "No IDs provided" });
+router.get(
+  "/companies-by-ids",
+  ClerkExpressRequireAuth({}),
+  async (req, res) => {
+    // const ids = [20, 21, 22, 70, 159];
+    if (!req.auth || !req.auth.userId) {
+      return res.status(401).json({ error: "Unauthenticated!" });
+    }
+    try {
+      const user = await clerkClient.users.getUser(req.auth.userId);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const ids = await getTheArray(user.id);
+
+      if (!ids || ids.length === 0) {
+        return res.status(400).json({ error: "No IDs found for the user" });
+      }
+
+      const companies = await findCompaniesByIds(ids);
+
+      if (!companies || companies.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "No companies found for the given IDs" });
+      }
+
+      res.json(companies);
+    } catch (err) {
+      console.error("Error fetching user data or companies:", err.message);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
   }
-  try {
-    const companies = await findCompaniesByIds(ids);
-    res.json(companies);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+);
 
 router.post("/verify", async (req, res) => {
   const { id } = req.body;

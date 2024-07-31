@@ -216,6 +216,28 @@ const getOrCreateUserCredits = async (clerkUserId, email, firstName) => {
   }
 };
 
+const getTheArray = async (clerkUserId) => {
+  try {
+    const result = await sql`
+      SELECT services
+      FROM users
+      WHERE clerk_user_id = ${clerkUserId};
+    `;
+
+    if (result.length === 0) {
+      throw new Error(`No user found with clerk_user_id: ${clerkUserId}`);
+    }
+
+    return result[0].services;
+  } catch (error) {
+    console.error(
+      `Error fetching services array for user ${clerkUserId}:`,
+      error.message
+    );
+    throw new Error("Internal Server Error");
+  }
+};
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -223,4 +245,5 @@ module.exports = {
   findCompaniesByIds,
   verifyCompanyEmails,
   getOrCreateUserCredits,
+  getTheArray,
 };

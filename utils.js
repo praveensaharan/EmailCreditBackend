@@ -238,6 +238,20 @@ const getTheArray = async (clerkUserId) => {
   }
 };
 
+async function getTransactions(clerkUserId) {
+  try {
+    const userQuery = await sql`
+      SELECT * FROM transactions 
+      WHERE user_id = ${clerkUserId};
+    `;
+
+    return userQuery;
+  } catch (error) {
+    console.error("Error fetching transactions:", error.message);
+    throw new Error("Internal Server Error");
+  }
+}
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -246,4 +260,5 @@ module.exports = {
   verifyCompanyEmails,
   getOrCreateUserCredits,
   getTheArray,
+  getTransactions,
 };

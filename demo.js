@@ -237,13 +237,23 @@ const getOrCreateUserCredits = async (clerkUserId, email, firstName) => {
   }
 };
 
+async function getTransactions(clerkUserId) {
+  try {
+    const userQuery = await sql`
+      SELECT * FROM transactions 
+      WHERE user_id = ${clerkUserId};
+    `;
+
+    return userQuery;
+  } catch (error) {
+    console.error("Error fetching transactions:", error.message);
+    throw new Error("Internal Server Error");
+  }
+}
+
 async function main() {
   try {
-    const result = await getOrCreateUserCredits(
-      "clerk_002", // Clerk user ID
-      "user1@example.com", // Email
-      "John" // First name
-    );
+    const result = await getTransactions("user_2issiUUcFXXMO569jyWpL6shrX1");
     console.log("Final result:", result);
   } catch (error) {
     console.error("Error:", error);

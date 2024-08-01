@@ -8,6 +8,7 @@ const {
   verifyCompanyEmails,
   getOrCreateUserCredits,
   getTheArray,
+  getTransactions,
 } = require("./utils");
 
 const router = express.Router();
@@ -104,6 +105,26 @@ router.get(
     }
   }
 );
+
+router.get("/transactions", ClerkExpressRequireAuth({}), async (req, res) => {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ error: "Unauthenticated!" });
+  }
+  try {
+    const user = await clerkClient.users.getUser(req.auth.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const transactions = await getTransactions(user.id);
+
+    res.json(transactions);
+  } catch (err) {
+    console.error("Error fetching user data or transactions:", err.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 router.post("/verify", async (req, res) => {
   const { id } = req.body;

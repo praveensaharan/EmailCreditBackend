@@ -241,8 +241,9 @@ const getTheArray = async (clerkUserId) => {
 async function getTransactions(clerkUserId) {
   try {
     const userQuery = await sql`
-      SELECT * FROM transactions 
-      WHERE user_id = ${clerkUserId};
+        SELECT * FROM transactions 
+      WHERE user_id = ${clerkUserId}
+      ORDER BY transaction_date DESC;
     `;
 
     return userQuery;

@@ -251,12 +251,39 @@ async function getTransactions(clerkUserId) {
   }
 }
 
+async function MakeTransactions(
+  clerkUserId,
+  credit,
+  description,
+  status,
+  notes
+) {
+  try {
+    const userQuery = await sql`
+      INSERT INTO transactions (user_id, amount, description, status, notes)
+      VALUES (${clerkUserId}, ${credit}, ${description}, ${status}, ${notes});
+    `;
+
+    return userQuery;
+  } catch (error) {
+    console.error("Error making transaction:", error.message); // Updated error message
+    throw new Error("Internal Server Error");
+  }
+}
+
 async function main() {
   try {
-    const result = await getTransactions("user_2issiUUcFXXMO569jyWpL6shrX1");
+    // const result1 = await MakeTransactions(
+    //   "user_2issiUUcFXXMO569jyWpL6shrX1",
+    //   -1,
+    //   "Clerk Emails",
+    //   "Completed",
+    //   "Service charge for unlocking emails"
+    // );
+    const result = await getTransactions(`user_2issiUUcFXXMO569jyWpL6shrX1`);
     console.log("Final result:", result);
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error:", error.message); // Improved error handling
   }
 }
 

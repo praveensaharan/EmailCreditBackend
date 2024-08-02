@@ -9,6 +9,7 @@ const {
   getOrCreateUserCredits,
   getTheArray,
   getTransactions,
+  AddCompanyIdToUser,
 } = require("./utils");
 
 const router = express.Router();
@@ -126,16 +127,49 @@ router.get("/transactions", ClerkExpressRequireAuth({}), async (req, res) => {
   }
 });
 
-router.post("/verify", async (req, res) => {
-  const { id } = req.body;
+router.post("/verify", ClerkExpressRequireAuth({}), async (req, res) => {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ error: "Unauthenticated!" });
+  }
+
   try {
+    const user = await clerkClient.users.getUser(req.auth.userId);
+    const { id } = req.body;
+
     if (!id) {
-      return res.status(400).json({ error: "Key is required" });
+      return res.status(400).json({ error: "Company ID is required" });
     }
-    const updatedCompany = await verifyCompanyEmails(id);
-    res.json(updatedCompany);
+
+    const updatedCompany = await verifyCompanyEmails(id, user.id);
+    return res.json(updatedCompany);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error verifying company emails:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/AddToUser", ClerkExpressRequireAuth({}), async (req, res) => {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ error: "Unauthenticated!" });
+  }
+
+  try {
+    const user = await clerkClient.users.getUser(req.auth.userId);
+    const { id, companyName } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: "Company ID is required" });
+    }
+    if (!companyName) {
+      return res.status(400).json({ error: "Company Name is required" });
+    }
+
+    await AddCompanyIdToUser(user.id, id, companyName);
+
+    res.status(200).json({ message: "Company ID added successfully" });
+  } catch (err) {
+    console.error("Error adding company ID to user:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

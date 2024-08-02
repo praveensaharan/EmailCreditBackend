@@ -112,8 +112,9 @@ async function verifyEmail(email) {
   }
 }
 
-async function verifyCompanyEmails(id) {
+async function verifyCompanyEmails(id, clerkUserId) {
   try {
+    // Fetch the company info
     const result = await sql`
       SELECT * FROM company_info 
       WHERE id = ${id};
@@ -143,6 +144,7 @@ async function verifyCompanyEmails(id) {
         verificationResults.push(verificationResult.email);
       }
     }
+
     console.log("Verified emails:", verificationResults);
 
     if (verificationResults.length === 0) {
@@ -153,8 +155,19 @@ async function verifyCompanyEmails(id) {
       console.log(
         `Company with ID ${id} deleted because all emails are invalid.`
       );
+
+      await UpdateBalance(clerkUserId, emails.length); // Subtract credits
+      await MakeTransactions(
+        clerkUserId,
+        -emails.length,
+        `${company.company_name} : Emails verification`,
+        "Completed",
+        "Email verification service fee"
+      );
+
       return null;
     } else {
+      // Update the company record with verified emails
       await sql`
         UPDATE company_info
         SET 
@@ -168,11 +181,21 @@ async function verifyCompanyEmails(id) {
         WHERE id = ${id};
       `;
 
-      const updateresult = await sql`
+      const updateResult = await sql`
         SELECT * FROM company_info 
         WHERE id = ${id};
       `;
-      console.log("Updated company info:", updateresult);
+
+      console.log("Updated company info:", updateResult);
+
+      await UpdateBalance(clerkUserId, emails.length); // Subtract credits
+      await MakeTransactions(
+        clerkUserId,
+        -emails.length,
+        `${company.company_name} : Emails verified`,
+        "Completed",
+        "Email verification service fee"
+      );
 
       return {
         id: company.id,
@@ -180,12 +203,48 @@ async function verifyCompanyEmails(id) {
         companyDomain: company.company_domain,
         emails: verificationResults,
         creationDate: company.creationdate,
-        lastVerificationDate: updateresult[0].lastverificationdate,
+        lastVerificationDate: updateResult[0].lastverificationdate,
       };
     }
   } catch (err) {
     console.error(`Error fetching details for ID ${id}: ${err.message}`);
     throw new Error(`Error fetching details for ID ${id}: ${err.message}`);
+  }
+}
+
+async function UpdateBalance(clerkUserId, credit) {
+  try {
+    const userQuery = await sql`
+      UPDATE users
+      SET credits = credits - ${credit}
+      WHERE clerk_user_id = ${clerkUserId}
+      RETURNING *;
+    `;
+
+    return userQuery;
+  } catch (error) {
+    console.error("Error updating balance:", error.message);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function MakeTransactions(
+  clerkUserId,
+  credit,
+  description,
+  status,
+  notes
+) {
+  try {
+    const userQuery = await sql`
+      INSERT INTO transactions (user_id, amount, description, status, notes)
+      VALUES (${clerkUserId}, ${credit}, ${description}, ${status}, ${notes});
+    `;
+
+    return userQuery;
+  } catch (error) {
+    console.error("Error making transaction:", error.message);
+    throw new Error("Internal Server Error");
   }
 }
 
@@ -196,6 +255,7 @@ const getOrCreateUserCredits = async (clerkUserId, email, firstName) => {
       WHERE clerk_user_id = ${clerkUserId};
     `;
 
+    let userCredits;
     if (userQuery.length === 0) {
       const insertQuery = await sql`
         INSERT INTO users (clerk_user_id, email, first_name, services)
@@ -203,10 +263,19 @@ const getOrCreateUserCredits = async (clerkUserId, email, firstName) => {
         RETURNING credits;
       `;
 
-      return insertQuery[0].credits;
+      userCredits = insertQuery[0].credits;
+      await MakeTransactions(
+        clerkUserId,
+        10,
+        "Signup Bonus",
+        "Completed",
+        "Bonus for signing up"
+      );
     } else {
-      return userQuery[0].credits;
+      userCredits = userQuery[0].credits;
     }
+
+    return userCredits;
   } catch (error) {
     console.error(
       "Error fetching or inserting user information:",
@@ -253,6 +322,34 @@ async function getTransactions(clerkUserId) {
   }
 }
 
+async function AddCompanyIdToUser(clerkUserId, id, company_name) {
+  try {
+    // Update the user's services array by appending the new service ID
+    await sql`
+      UPDATE users
+      SET services = array_append(services, ${id})
+      WHERE clerk_user_id = ${clerkUserId};
+    `;
+
+    // Deduct credits for the service charge
+    await UpdateBalance(clerkUserId, 1); // Assuming credits are deducted, so pass a positive value
+
+    // Log the transaction
+    await MakeTransactions(
+      clerkUserId,
+      -1, // Assuming that -1 represents the deduction of 1 credit
+      `${company_name} : Emails Unlocked`,
+      "Completed",
+      "Service charge for unlocking emails"
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating user services:", error.message);
+    throw new Error("Internal Server Error");
+  }
+}
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -262,4 +359,5 @@ module.exports = {
   getOrCreateUserCredits,
   getTheArray,
   getTransactions,
+  AddCompanyIdToUser,
 };

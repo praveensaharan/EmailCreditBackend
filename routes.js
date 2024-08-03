@@ -77,6 +77,7 @@ router.get(
     if (!req.auth || !req.auth.userId) {
       return res.status(401).json({ error: "Unauthenticated!" });
     }
+
     try {
       const user = await clerkClient.users.getUser(req.auth.userId);
 
@@ -87,18 +88,16 @@ router.get(
       const ids = await getTheArray(user.id);
 
       if (!ids || ids.length === 0) {
-        return res.status(400).json({ error: "No IDs found for the user" });
+        return res.status(200).json([]);
       }
 
       const companies = await findCompaniesByIds(ids);
 
       if (!companies || companies.length === 0) {
-        return res
-          .status(404)
-          .json({ error: "No companies found for the given IDs" });
+        return res.status(200).json([]);
       }
 
-      res.json(companies);
+      res.status(200).json(companies);
     } catch (err) {
       console.error("Error fetching user data or companies:", err.message);
       res.status(500).json({ error: "Internal Server Error" });

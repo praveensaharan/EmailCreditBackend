@@ -74,7 +74,6 @@ router.get(
   "/companies-by-ids",
   ClerkExpressRequireAuth({}),
   async (req, res) => {
-    // const ids = [20, 21, 22, 70, 159];
     if (!req.auth || !req.auth.userId) {
       return res.status(401).json({ error: "Unauthenticated!" });
     }
@@ -170,6 +169,19 @@ router.post("/AddToUser", ClerkExpressRequireAuth({}), async (req, res) => {
   } catch (err) {
     console.error("Error adding company ID to user:", err);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.get("/search/:pattern", async (req, res) => {
+  const pattern = req.params.pattern;
+  console.log("pattern", pattern);
+  try {
+    const companyDetails = await findCompanyByPattern(pattern);
+    res.json(companyDetails);
+  } catch (err) {
+    res.status(500).json({
+      error: `Failed to search for companies matching pattern "${pattern}"`,
+    });
   }
 });
 

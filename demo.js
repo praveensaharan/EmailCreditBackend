@@ -136,7 +136,7 @@ async function verifyEmail(email) {
 async function verifyCompanyEmails(id) {
   try {
     const result = await sql`
-      SELECT * FROM company_info 
+      SELECT * FROM company_compl 
       WHERE id = ${id};
     `;
 
@@ -168,7 +168,7 @@ async function verifyCompanyEmails(id) {
 
     if (verificationResults.length === 0) {
       await sql`
-        DELETE FROM company_info 
+        DELETE FROM company_compl 
         WHERE id = ${id};
       `;
       console.log(
@@ -177,7 +177,7 @@ async function verifyCompanyEmails(id) {
       return null;
     } else {
       await sql`
-        UPDATE company_info
+        UPDATE company_compl
         SET 
           email1 = ${verificationResults[0] || null},
           email2 = ${verificationResults[1] || null},
@@ -190,7 +190,7 @@ async function verifyCompanyEmails(id) {
       `;
 
       const updateresult = await sql`
-        SELECT * FROM company_info 
+        SELECT * FROM company_compl 
         WHERE id = ${id};
       `;
       console.log("Updated company info:", updateresult);

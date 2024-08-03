@@ -16,11 +16,31 @@ async function findCompanyByPattern(pattern) {
   try {
     const sqlPattern = `%${pattern}%`;
     const companyDetails = await sql`
-      SELECT id, company_name, email1, email2, email3 FROM company_info
+      SELECT * FROM company_compl
       WHERE company_name ILIKE ${sqlPattern}
       OR company_domain ILIKE ${sqlPattern}`;
 
-    return companyDetails;
+    const transformedContents = companyDetails.map((company) => {
+      const emails = [
+        company.email1,
+        company.email2,
+        company.email3,
+        company.email4,
+        company.email5,
+        company.email6,
+      ].filter((email) => email);
+
+      return {
+        id: company.id,
+        companyName: company.company_name,
+        companyDomain: company.company_domain,
+        emails: emails,
+        creationDate: company.creationdate,
+        lastVerificationDate: company.lastverificationdate,
+      };
+    });
+
+    return transformedContents;
   } catch (err) {
     throw new Error(
       `Error fetching details for pattern "${pattern}": ${err.message}`
@@ -30,7 +50,7 @@ async function findCompanyByPattern(pattern) {
 
 async function printTableContents() {
   try {
-    const tableContents = await sql`SELECT * FROM company_info LIMIT 200`;
+    const tableContents = await sql`SELECT * FROM company_compl LIMIT 200`;
 
     // Transforming the data
     const transformedContents = tableContents.map((company) => {
@@ -62,7 +82,7 @@ async function printTableContents() {
 async function findCompaniesByIds(ids) {
   try {
     const companyDetails = await sql`
-      SELECT * FROM company_info 
+      SELECT * FROM company_compl 
       WHERE id = ANY(${ids})`;
 
     const transformedContents = companyDetails.map((company) => {
@@ -116,7 +136,7 @@ async function verifyCompanyEmails(id, clerkUserId) {
   try {
     // Fetch the company info
     const result = await sql`
-      SELECT * FROM company_info 
+      SELECT * FROM company_compl
       WHERE id = ${id};
     `;
 
@@ -149,7 +169,7 @@ async function verifyCompanyEmails(id, clerkUserId) {
 
     if (verificationResults.length === 0) {
       await sql`
-        DELETE FROM company_info 
+        DELETE FROM company_compl 
         WHERE id = ${id};
       `;
       console.log(
@@ -169,7 +189,7 @@ async function verifyCompanyEmails(id, clerkUserId) {
     } else {
       // Update the company record with verified emails
       await sql`
-        UPDATE company_info
+        UPDATE company_compl
         SET 
           email1 = ${verificationResults[0] || null},
           email2 = ${verificationResults[1] || null},
@@ -182,7 +202,7 @@ async function verifyCompanyEmails(id, clerkUserId) {
       `;
 
       const updateResult = await sql`
-        SELECT * FROM company_info 
+        SELECT * FROM company_compl 
         WHERE id = ${id};
       `;
 

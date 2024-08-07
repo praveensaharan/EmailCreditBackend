@@ -10,6 +10,7 @@ const {
   getTheArray,
   getTransactions,
   AddCompanyIdToUser,
+  redeemCoupon,
 } = require("./utils");
 
 const router = express.Router();
@@ -167,6 +168,31 @@ router.post("/AddToUser", ClerkExpressRequireAuth({}), async (req, res) => {
     res.status(200).json({ message: "Company ID added successfully" });
   } catch (err) {
     console.error("Error adding company ID to user:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.post("/redeem-coupon", ClerkExpressRequireAuth(), async (req, res) => {
+  if (!req.auth || !req.auth.userId) {
+    return res.status(401).json({ error: "Unauthenticated!" });
+  }
+
+  try {
+    const { couponCode } = req.body;
+
+    if (!couponCode) {
+      return res.status(400).json({ error: "Coupon code is required" });
+    }
+    console.log("Coupon code:", couponCode);
+
+    const result = await redeemCoupon(req.auth.userId, couponCode);
+    if (result && result.message) {
+      return res.status(200).json(result); // Send 200 OK with the result
+    } else {
+      return res.status(500).json({ error: "Unexpected error occurred" });
+    }
+  } catch (err) {
+    console.error("Error redeeming coupon:", err.message);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

@@ -370,6 +370,59 @@ async function AddCompanyIdToUser(clerkUserId, id, company_name) {
   }
 }
 
+const redeemCoupon = async (clerkUserId, couponCode) => {
+  try {
+    const coupon = await sql`
+      SELECT * FROM coupons
+      WHERE code = ${couponCode} AND is_active = TRUE
+    `;
+    console.log("Coupon:", coupon);
+
+    if (coupon.length === 0) {
+      throw new Error("Invalid or expired coupon");
+    }
+
+    const couponData = coupon[0];
+
+    if (new Date(couponData.expiry_date) < new Date()) {
+      throw new Error("Coupon has expired");
+    }
+
+    const redemption = await sql`
+      SELECT * FROM redemptions
+      WHERE coupon_id = ${couponData.id} AND user_id = ${clerkUserId}
+    `;
+    console.log("Redemption:", redemption);
+
+    if (redemption.length > 0) {
+      throw new Error("Coupon already redeemed by this user");
+    }
+
+    await UpdateBalance(clerkUserId, -couponData.value);
+
+    await MakeTransactions(
+      clerkUserId,
+      couponData.value,
+      `${couponCode} : Redeemed`,
+      "Completed",
+      "Get credits for redeeming coupon"
+    );
+
+    await sql`
+      INSERT INTO redemptions (user_id, coupon_id)
+      VALUES (${clerkUserId}, ${couponData.id})
+    `;
+
+    return {
+      message: "Coupon redeemed successfully",
+      credits: couponData.value,
+    };
+  } catch (error) {
+    console.error("Error redeeming coupon:", error.message);
+    throw new Error("Internal Server Error");
+  }
+};
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -380,4 +433,5 @@ module.exports = {
   getTheArray,
   getTransactions,
   AddCompanyIdToUser,
+  redeemCoupon,
 };

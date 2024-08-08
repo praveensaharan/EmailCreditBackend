@@ -431,11 +431,11 @@ async function getInsights() {
 
     const transactionResult =
       await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
-    const totalTransactions = transactionResult[0].totaltransactions;
+    const totalTransactions = parseInt(transactionResult[0].totaltransactions);
 
     const redemptionResult =
       await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
-    const totalRedemptions = redemptionResult[0].totalredemptions;
+    const totalRedemptions = parseInt(redemptionResult[0].totalredemptions);
 
     let totalEmails = 0;
     companies.forEach((company) => {

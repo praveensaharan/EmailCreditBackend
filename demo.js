@@ -44,12 +44,12 @@ async function getInsights() {
     // Fetch total number of transactions
     const transactionResult =
       await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
-    const totalTransactions = transactionResult[0].totaltransactions;
+    const totalTransactions = parseInt(transactionResult[0].totaltransactions);
 
     // Fetch total number of redemptions
     const redemptionResult =
       await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
-    const totalRedemptions = redemptionResult[0].totalredemptions;
+    const totalRedemptions = parseInt(redemptionResult[0].totalredemptions);
 
     // Calculate total number of emails
     let totalEmails = 0;

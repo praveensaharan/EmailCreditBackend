@@ -21,20 +21,20 @@ async function findCompanyByPattern(pattern) {
       OR company_domain ILIKE ${sqlPattern}`;
 
     const transformedContents = companyDetails.map((company) => {
-      const emails = [
-        company.email1,
-        company.email2,
-        company.email3,
-        company.email4,
-        company.email5,
-        company.email6,
-      ].filter((email) => email);
+      // const emails = [
+      //   company.email1,
+      //   company.email2,
+      //   company.email3,
+      //   company.email4,
+      //   company.email5,
+      //   company.email6,
+      // ].filter((email) => email);
 
       return {
         id: company.id,
         companyName: company.company_name,
         companyDomain: company.company_domain,
-        emails: emails,
+        emails: ["user1@demomail.com"],
         creationDate: company.creationdate,
         lastVerificationDate: company.lastverificationdate,
       };
@@ -50,24 +50,25 @@ async function findCompanyByPattern(pattern) {
 
 async function printTableContents() {
   try {
-    const tableContents = await sql`SELECT * FROM company_compl LIMIT 200`;
+    const tableContents =
+      await sql`SELECT * FROM company_compl ORDER BY lastverificationdate DESC LIMIT 50`;
 
     // Transforming the data
     const transformedContents = tableContents.map((company) => {
-      const emails = [
-        company.email1,
-        company.email2,
-        company.email3,
-        company.email4,
-        company.email5,
-        company.email6,
-      ].filter((email) => email);
+      // const emails = [
+      //   company.email1,
+      //   company.email2,
+      //   company.email3,
+      //   company.email4,
+      //   company.email5,
+      //   company.email6,
+      // ].filter((email) => email);
 
       return {
         id: company.id,
         companyName: company.company_name,
         companyDomain: company.company_domain,
-        emails: emails,
+        emails: ["user1@demomail.com"],
         creationDate: company.creationdate,
         lastVerificationDate: company.lastverificationdate,
       };
@@ -423,6 +424,55 @@ const redeemCoupon = async (clerkUserId, couponCode) => {
   }
 };
 
+async function getInsights() {
+  try {
+    const companies = await sql`SELECT * FROM company_compl;`;
+    const totalCompanies = companies.length;
+
+    const transactionResult =
+      await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
+    const totalTransactions = transactionResult[0].totaltransactions;
+
+    const redemptionResult =
+      await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
+    const totalRedemptions = redemptionResult[0].totalredemptions;
+
+    let totalEmails = 0;
+    companies.forEach((company) => {
+      const emails = [
+        company.email1,
+        company.email2,
+        company.email3,
+        company.email4,
+        company.email5,
+        company.email6,
+      ].filter((email) => email);
+      totalEmails += emails.length;
+    });
+
+    const dailyVerificationCounts = await sql`
+      SELECT 
+        DATE(lastverificationdate) AS date,
+        COUNT(*) AS emailCount
+      FROM company_compl
+      WHERE lastverificationdate >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY DATE(lastverificationdate)
+      ORDER BY DATE(lastverificationdate) DESC;
+    `;
+
+    return {
+      totalCompanies,
+      totalEmails,
+      dailyVerificationCounts,
+      totalTransactions,
+      totalRedemptions,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -434,4 +484,5 @@ module.exports = {
   getTransactions,
   AddCompanyIdToUser,
   redeemCoupon,
+  getInsights,
 };

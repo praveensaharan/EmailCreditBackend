@@ -7,6 +7,7 @@ const {
   PGPASSWORD,
   ENDPOINT_ID,
 } = require("./envSetup");
+// PGPASSWORD = decodeURIComponent(PGPASSWORD);
 
 const sql = postgres({
   host: PGHOST,

@@ -11,6 +11,7 @@ const {
   getTransactions,
   AddCompanyIdToUser,
   redeemCoupon,
+  getInsights,
 } = require("./utils");
 
 const router = express.Router();
@@ -206,6 +207,17 @@ router.get("/search/:pattern", async (req, res) => {
   } catch (err) {
     res.status(500).json({
       error: `Failed to search for companies matching pattern "${pattern}"`,
+    });
+  }
+});
+
+router.get("/insights", async (req, res) => {
+  try {
+    const Details = await getInsights();
+    res.json(Details);
+  } catch (err) {
+    res.status(500).json({
+      error: `Failed`,
     });
   }
 });

@@ -1,41 +1,6 @@
 const sql = require("./db");
 const axios = require("axios");
 
-const redeemCoupon = async (clerkUserId, couponCode) => {
-  // Fetch coupon
-  const coupon = await sql`
-    SELECT * FROM coupons
-    WHERE code = ${couponCode} AND is_active = TRUE
-  `;
-  console.log("Coupon:", coupon);
-  if (coupon.length === 0) {
-    throw new Error("Invalid or expired coupon");
-  }
-
-  const couponData = coupon[0];
-
-  if (new Date(couponData.expiry_date) < new Date()) {
-    throw new Error("Coupon has expired");
-  }
-
-  // Check if the coupon has already been redeemed by this user
-  const redemption = await sql`
-    SELECT * FROM redemptions
-    WHERE coupon_id = ${couponData.id} AND user_id = ${clerkUserId}
-  `;
-
-  if (redemption.length > 0) {
-    throw new Error("Coupon already redeemed by this user");
-  }
-  console.log("Coupon Data:", redemption);
-  await sql`
-    INSERT INTO redemptions (user_id, coupon_id)
-    VALUES (${clerkUserId}, ${couponData.id})
-  `;
-
-  return { message: "Coupon redeemed successfully", credits: couponData.value };
-};
-
 async function getTransactions(clerkUserId) {
   try {
     const userQuery = await sql`
@@ -70,23 +35,96 @@ async function MakeTransactions(
   }
 }
 
+async function getInsights() {
+  try {
+    // Fetch total number of companies
+    const companies = await sql`SELECT * FROM company_compl;`;
+    const totalCompanies = companies.length;
+
+    // Fetch total number of transactions
+    const transactionResult =
+      await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
+    const totalTransactions = transactionResult[0].totaltransactions;
+
+    // Fetch total number of redemptions
+    const redemptionResult =
+      await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
+    const totalRedemptions = redemptionResult[0].totalredemptions;
+
+    // Calculate total number of emails
+    let totalEmails = 0;
+    companies.forEach((company) => {
+      const emails = [
+        company.email1,
+        company.email2,
+        company.email3,
+        company.email4,
+        company.email5,
+        company.email6,
+      ].filter((email) => email);
+      totalEmails += emails.length;
+    });
+
+    // Fetch daily verification counts for the last 30 days
+    const dailyVerificationCounts = await sql`
+      SELECT 
+        DATE(lastverificationdate) AS date,
+        COUNT(*) AS emailCount
+      FROM company_compl
+      WHERE lastverificationdate >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY DATE(lastverificationdate)
+      ORDER BY DATE(lastverificationdate) DESC;
+    `;
+
+    // Convert dailyVerificationCounts to JSONB format
+    const dailyVerificationCountsJson = JSON.stringify(dailyVerificationCounts);
+
+    // Insert the insights into the insights table
+    await sql`
+      INSERT INTO insights (total_companies, total_emails, total_transactions, total_redemptions, daily_verification_counts)
+      VALUES (${totalCompanies}, ${totalEmails}, ${totalTransactions}, ${totalRedemptions}, ${dailyVerificationCountsJson});
+    `;
+
+    return {
+      totalCompanies,
+      totalEmails,
+      dailyVerificationCounts,
+      totalTransactions,
+      totalRedemptions,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
 async function main() {
   try {
-    // const result1 = await MakeTransactions(
-    //   "user_2issiUUcFXXMO569jyWpL6shrX1",
-    //   -1,
-    //   "Clerk Emails",
-    //   "Completed",
-    //   "Service charge for unlocking emails"
-    // );
-    const result = await redeemCoupon(
-      `user_2issiUUcFXXMO569jyWpL6shrX1`,
-      "SAVE10"
-    );
+    const result = await getInsights();
     console.log("Final result:", result);
   } catch (error) {
-    console.error("Error:", error.message); // Improved error handling
+    console.error("Error:", error.message);
   }
 }
 
 main();
+
+// async function main() {
+//   try {
+//     // const result1 = await MakeTransactions(
+//     //   "user_2issiUUcFXXMO569jyWpL6shrX1",
+//     //   -1,
+//     //   "Clerk Emails",
+//     //   "Completed",
+//     //   "Service charge for unlocking emails"
+//     // );
+//     const result = await getInsights();
+//     // const result = await redeemCoupon(
+//     //   `user_2issiUUcFXXMO569jyWpL6shrX1`,
+//     //   "SAVE10"
+//     // );
+//     console.log("Final result:", result);
+//   } catch (error) {
+//     console.error("Error:", error.message); // Improved error handling
+//   }
+// }

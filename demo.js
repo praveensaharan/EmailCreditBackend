@@ -37,21 +37,17 @@ async function MakeTransactions(
 
 async function getInsights() {
   try {
-    // Fetch total number of companies
     const companies = await sql`SELECT * FROM company_compl;`;
     const totalCompanies = companies.length;
 
-    // Fetch total number of transactions
     const transactionResult =
       await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
     const totalTransactions = parseInt(transactionResult[0].totaltransactions);
 
-    // Fetch total number of redemptions
     const redemptionResult =
       await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
     const totalRedemptions = parseInt(redemptionResult[0].totalredemptions);
 
-    // Calculate total number of emails
     let totalEmails = 0;
     companies.forEach((company) => {
       const emails = [

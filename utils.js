@@ -426,46 +426,19 @@ const redeemCoupon = async (clerkUserId, couponCode) => {
 
 async function getInsights() {
   try {
-    const companies = await sql`SELECT * FROM company_compl;`;
-    const totalCompanies = companies.length;
+    const result = await sql`SELECT * FROM insights ORDER BY id DESC LIMIT 1;`;
 
-    const transactionResult =
-      await sql`SELECT COUNT(*) as totalTransactions FROM transactions;`;
-    const totalTransactions = parseInt(transactionResult[0].totaltransactions);
+    const company = result[0];
 
-    const redemptionResult =
-      await sql`SELECT COUNT(*) as totalRedemptions FROM redemptions;`;
-    const totalRedemptions = parseInt(redemptionResult[0].totalredemptions);
-
-    let totalEmails = 0;
-    companies.forEach((company) => {
-      const emails = [
-        company.email1,
-        company.email2,
-        company.email3,
-        company.email4,
-        company.email5,
-        company.email6,
-      ].filter((email) => email);
-      totalEmails += emails.length;
-    });
-
-    const dailyVerificationCounts = await sql`
-      SELECT 
-        DATE(lastverificationdate) AS date,
-        COUNT(*) AS emailCount
-      FROM company_compl
-      WHERE lastverificationdate >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY DATE(lastverificationdate)
-      ORDER BY DATE(lastverificationdate) DESC;
-    `;
+    // Parse the daily_verification_counts field
+    if (company && company.daily_verification_counts) {
+      company.daily_verification_counts = JSON.parse(
+        company.daily_verification_counts
+      );
+    }
 
     return {
-      totalCompanies,
-      totalEmails,
-      dailyVerificationCounts,
-      totalTransactions,
-      totalRedemptions,
+      company,
     };
   } catch (error) {
     console.error("Error executing query:", error);

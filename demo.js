@@ -183,9 +183,48 @@ async function insertOrUpdateCompanyContacts2(
   }
 }
 
+async function getAllCompensation() {
+  try {
+    const companies = await sql`SELECT * FROM all_compensation limit 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getLeetcodeCompensation() {
+  try {
+    const companies = await sql`SELECT * FROM leetcodetable limit 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getIITcodeCompensation() {
+  try {
+    const companies = await sql`SELECT * FROM iit_compensation limit 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
 async function main() {
   try {
-    const result = await getInsights();
+    const result = await getLeetcodeCompensation();
     console.log("Final result:", result);
   } catch (error) {
     console.error("Error:", error.message);

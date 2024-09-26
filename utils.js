@@ -21,15 +21,6 @@ async function findCompanyByPattern(pattern) {
       OR company_domain ILIKE ${sqlPattern}`;
 
     const transformedContents = companyDetails.map((company) => {
-      // const emails = [
-      //   company.email1,
-      //   company.email2,
-      //   company.email3,
-      //   company.email4,
-      //   company.email5,
-      //   company.email6,
-      // ].filter((email) => email);
-
       return {
         id: company.id,
         companyName: company.company_name,
@@ -446,6 +437,198 @@ async function getInsights() {
   }
 }
 
+async function getCompensationStats(xyz) {
+  try {
+    let companies;
+    if (xyz === "all") {
+      companies = await sql`SELECT * FROM all_compensation;`;
+    } else if (xyz === "iit") {
+      companies = await sql`SELECT * FROM iit_compensation;`;
+    } else {
+      companies = await sql`SELECT * FROM leetcodetable;`;
+    }
+
+    const experienceGroups = {
+      entry: [],
+      mid: [],
+      senior: [],
+      seniorPlus: [],
+    };
+
+    const salaryRanges = {
+      "1-10": 0,
+      "10-20": 0,
+      "20-30": 0,
+      "30-40": 0,
+      "40-60": 0,
+      "60-80": 0,
+      "80-1cr": 0,
+      "1cr+": 0,
+    };
+
+    const companyOffers = {};
+
+    function calculateMedian(arr) {
+      const sorted = arr.sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    companies.forEach((comp) => {
+      const experience = comp.experience;
+
+      const totalSalary = parseInt(comp.total_salary, 10) / 100000; // Convert to lakhs
+
+      // Categorize by experience
+      if (experience >= 0 && experience <= 1) {
+        experienceGroups.entry.push(totalSalary);
+      } else if (experience >= 2 && experience <= 6) {
+        experienceGroups.mid.push(totalSalary);
+      } else if (experience >= 7 && experience <= 10) {
+        experienceGroups.senior.push(totalSalary);
+      } else {
+        experienceGroups.seniorPlus.push(totalSalary);
+      }
+
+      if (totalSalary <= 10) {
+        salaryRanges["1-10"]++;
+      } else if (totalSalary <= 20) {
+        salaryRanges["10-20"]++;
+      } else if (totalSalary <= 30) {
+        salaryRanges["20-30"]++;
+      } else if (totalSalary <= 40) {
+        salaryRanges["30-40"]++;
+      } else if (totalSalary <= 60) {
+        salaryRanges["40-60"]++;
+      } else if (totalSalary <= 80) {
+        salaryRanges["60-80"]++;
+      } else if (totalSalary <= 100) {
+        salaryRanges["80-1cr"]++;
+      } else {
+        salaryRanges["1cr+"]++;
+      }
+
+      // Count offers by company
+      if (companyOffers[comp.company]) {
+        companyOffers[comp.company]++;
+      } else {
+        companyOffers[comp.company] = 1;
+      }
+    });
+
+    // Function to calculate min, max, and median for each experience group
+    function calculateStats(group) {
+      if (group.length === 0) return { min: 0, max: 0, median: 0 };
+      return {
+        min: Math.min(...group),
+        max: Math.max(...group),
+        median: calculateMedian(group),
+      };
+    }
+
+    // Prepare the stats for experience groups
+    const experienceStats = {
+      entry: calculateStats(experienceGroups.entry),
+      mid: calculateStats(experienceGroups.mid),
+      senior: calculateStats(experienceGroups.senior),
+      seniorPlus: calculateStats(experienceGroups.seniorPlus),
+    };
+
+    // Sort the companyOffers object by number of offers and get the top 15 companies
+    const top15Companies = Object.entries(companyOffers)
+      .sort(([, a], [, b]) => b - a) // Sort by number of offers in descending order
+      .slice(0, 15) // Get the top 15 companies
+      .reduce((acc, [company, offers]) => {
+        acc[company] = offers;
+        return acc;
+      }, {});
+
+    // Return the final stats
+    return {
+      experienceStats,
+      salaryRanges,
+      top15Companies, // Return only the top 15 companies
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getAllCompensation(searchTerm = "") {
+  try {
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM all_compensation
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getLeetcodeCompensation(searchTerm = "") {
+  try {
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM leetcodetable
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getIITcodeCompensation(searchTerm = "") {
+  try {
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM iit_compensation
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 5;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
 module.exports = {
   getPgVersion,
   findCompanyByPattern,
@@ -458,4 +641,8 @@ module.exports = {
   AddCompanyIdToUser,
   redeemCoupon,
   getInsights,
+  getCompensationStats,
+  getAllCompensation,
+  getLeetcodeCompensation,
+  getIITcodeCompensation,
 };

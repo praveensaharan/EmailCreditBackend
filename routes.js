@@ -12,6 +12,10 @@ const {
   AddCompanyIdToUser,
   redeemCoupon,
   getInsights,
+  getAllCompensation,
+  getLeetcodeCompensation,
+  getIITcodeCompensation,
+  getCompensationStats,
 } = require("./utils");
 
 const router = express.Router();
@@ -218,6 +222,72 @@ router.get("/insights", async (req, res) => {
   } catch (err) {
     res.status(500).json({
       error: `Failed`,
+    });
+  }
+});
+
+// Route for searching in all_compensation
+router.get("/search-all/:pattern?", async (req, res) => {
+  const pattern = req.params.pattern || ""; // Default to an empty string if no pattern is provided
+  console.log("Search pattern in all_compensation:", pattern);
+
+  try {
+    const companyDetails = await getAllCompensation(pattern);
+    res.json(companyDetails);
+  } catch (err) {
+    console.error("Error in /search-all:", err);
+    res.status(500).json({
+      error: `Failed to search for companies matching pattern "${pattern}" in all_compensation`,
+    });
+  }
+});
+
+// Route for searching in leetcodetable
+router.get("/search-leetcode/:pattern?", async (req, res) => {
+  const pattern = req.params.pattern || ""; // Default to an empty string if no pattern is provided
+  console.log("Search pattern in leetcodetable:", pattern);
+
+  try {
+    const companyDetails = await getLeetcodeCompensation(pattern);
+    res.json(companyDetails);
+  } catch (err) {
+    console.error("Error in /search-leetcode:", err);
+    res.status(500).json({
+      error: `Failed to search for companies matching pattern "${pattern}" in leetcodetable`,
+    });
+  }
+});
+
+// Route for searching in iit_compensation
+router.get("/search-iit/:pattern?", async (req, res) => {
+  const pattern = req.params.pattern || ""; // Default to an empty string if no pattern is provided
+  console.log("Search pattern in iit_compensation:", pattern);
+
+  try {
+    const companyDetails = await getIITcodeCompensation(pattern);
+    res.json(companyDetails);
+  } catch (err) {
+    console.error("Error in /search-iit:", err);
+    res.status(500).json({
+      error: `Failed to search for companies matching pattern "${pattern}" in iit_compensation`,
+    });
+  }
+});
+
+router.get("/compensation-stats/:for?", async (req, res) => {
+  // Destructure `for` parameter or default to "all" if not provided
+  const xyz = req.params.for || "";
+  console.log("Getting compensation stats for:", xyz);
+
+  try {
+    const stats = await getCompensationStats(xyz);
+
+    res.json(stats);
+  } catch (err) {
+    console.error("Error in /compensation-stats/:for:", err);
+
+    res.status(500).json({
+      error: `Failed to retrieve compensation stats for table "${xyz}"`,
     });
   }
 });

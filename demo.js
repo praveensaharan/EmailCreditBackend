@@ -183,24 +183,9 @@ async function insertOrUpdateCompanyContacts2(
   }
 }
 
-async function getAllCompensation() {
-  try {
-    const companies = await sql`SELECT * FROM all_compensation limit 50;`;
-
-    return {
-      companies,
-    };
-  } catch (error) {
-    console.error("Error executing query:", error);
-    throw new Error("Internal Server Error");
-  }
-}
-
 async function getCompensationStats(xyz) {
   try {
     let companies;
-
-    // Fetch data from the appropriate table based on the 'xyz' parameter
     if (xyz === "all") {
       companies = await sql`SELECT * FROM all_compensation;`;
     } else if (xyz === "iit") {
@@ -209,7 +194,6 @@ async function getCompensationStats(xyz) {
       companies = await sql`SELECT * FROM leetcodetable;`;
     }
 
-    // Experience ranges: Entry (0-1), Mid (2-6), Senior (7-10), Senior+ (11+)
     const experienceGroups = {
       entry: [],
       mid: [],
@@ -217,7 +201,6 @@ async function getCompensationStats(xyz) {
       seniorPlus: [],
     };
 
-    // Salary ranges in lakhs (1-10, 10-20, etc.)
     const salaryRanges = {
       "1-10": 0,
       "10-20": 0,
@@ -229,10 +212,8 @@ async function getCompensationStats(xyz) {
       "1cr+": 0,
     };
 
-    // Count offers by company
     const companyOffers = {};
 
-    // Helper function to calculate median
     function calculateMedian(arr) {
       const sorted = arr.sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
@@ -241,11 +222,9 @@ async function getCompensationStats(xyz) {
         : (sorted[mid - 1] + sorted[mid]) / 2;
     }
 
-    // Loop through the data to categorize by experience, salary, and company
     companies.forEach((comp) => {
       const experience = comp.experience;
 
-      // Convert the total_salary from string to integer and convert to lakhs
       const totalSalary = parseInt(comp.total_salary, 10) / 100000; // Convert to lakhs
 
       // Categorize by experience
@@ -259,7 +238,6 @@ async function getCompensationStats(xyz) {
         experienceGroups.seniorPlus.push(totalSalary);
       }
 
-      // Categorize by salary range (in lakhs)
       if (totalSalary <= 10) {
         salaryRanges["1-10"]++;
       } else if (totalSalary <= 20) {
@@ -325,9 +303,20 @@ async function getCompensationStats(xyz) {
   }
 }
 
-async function getLeetcodeCompensation() {
+async function getAllCompensation(searchTerm = "") {
   try {
-    const companies = await sql`SELECT * FROM leetcodetable limit 50;`;
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM all_compensation
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 50;`;
 
     return {
       companies,
@@ -338,9 +327,44 @@ async function getLeetcodeCompensation() {
   }
 }
 
-async function getIITcodeCompensation() {
+async function getLeetcodeCompensation(searchTerm = "") {
   try {
-    const companies = await sql`SELECT * FROM iit_compensation limit 5;`;
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM leetcodetable
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 50;`;
+
+    return {
+      companies,
+    };
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw new Error("Internal Server Error");
+  }
+}
+
+async function getIITcodeCompensation(searchTerm = "") {
+  try {
+    // Trim the search term and prepare the SQL query
+    const trimmedSearchTerm = searchTerm.trim();
+
+    // Fetch data from the database, including a search filter if a term is provided
+    const companies = await sql`
+      SELECT * FROM iit_compensation
+      WHERE ${
+        trimmedSearchTerm === ""
+          ? sql`TRUE`
+          : sql`company ILIKE '%' || ${trimmedSearchTerm} || '%'`
+      }
+      LIMIT 5;`;
 
     return {
       companies,
@@ -353,7 +377,7 @@ async function getIITcodeCompensation() {
 
 async function main() {
   try {
-    const result = await getCompensationStats("iit");
+    const result = await getAllCompensation();
     console.log("Final result:", result);
   } catch (error) {
     console.error("Error:", error.message);
@@ -361,23 +385,3 @@ async function main() {
 }
 
 main();
-
-// async function main() {
-//   try {
-//     // const result1 = await MakeTransactions(
-//     //   "user_2issiUUcFXXMO569jyWpL6shrX1",
-//     //   -1,
-//     //   "Clerk Emails",
-//     //   "Completed",
-//     //   "Service charge for unlocking emails"
-//     // );
-//     const result = await getInsights();
-//     // const result = await redeemCoupon(
-//     //   `user_2issiUUcFXXMO569jyWpL6shrX1`,
-//     //   "SAVE10"
-//     // );
-//     console.log("Final result:", result);
-//   } catch (error) {
-//     console.error("Error:", error.message); // Improved error handling
-//   }
-// }
